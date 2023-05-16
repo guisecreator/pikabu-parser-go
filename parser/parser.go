@@ -21,6 +21,7 @@ type Parser struct {
 	Pre          string
 	MissTags     []string
 	PublicTags   bool
+	
     EntryTree    *goquery.Document
     HTTPClient   *http.Client
 }
