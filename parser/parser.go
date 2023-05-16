@@ -66,7 +66,7 @@ func (p *Parser) GetArticles() []map[string]interface{} {
 
 		fmt.Printf("Parsing: %s\n", articleLink)
 
-		articleTree, err := p.getListArticles(articleLink)
+		articleTree := p.getListArticles()
 		if err != nil {
 			fmt.Printf("Error in ID: %s\n", articleLink)
 			continue
@@ -114,9 +114,9 @@ func (p *Parser) getListArticles() []map[string]string {
 	if p.getTree() {
 		if p.isBlocks() {
 			for _, block := range p.getBlocks() {
-				if !p.notMissingArticle(block) {
-					continue
-				}
+				// if !p.notMissingArticle(block) {
+				// 	continue
+				// }
 				articleID := p.getArticleID(block)
 				if articleID == "" {
 					continue
@@ -199,11 +199,14 @@ func (p *Parser) getTree() bool {
     return true
 }
 
-func (p *Parser) getArticleTags(articleTree *html.Node) []string {
+func (p *Parser) getArticleTags(articleTree *goquery.Selection) []string {
 	var tags []string
 	tagsNodes := articleTree.Find(".tag-list").Find("a")
-	tagsNodes.Each(func(_ int, tagNode *goquery.Selection) {
+
+	tagsNodes.Each(func(_ int, 
+		tagNode *goquery.Selection) {
 		tagText := strings.TrimSpace(tagNode.Text())
+
 		if len(tagText) > 0 {
 			tags = append(tags, tagText)
 		}
@@ -216,9 +219,10 @@ func (p *Parser) getArticle(articleLink string) *goquery.Document {
 	// Returns the article object
 	data, err := p.HTTPClient.Get(articleLink)
 	if err != nil {
-		p.dbLog(fmt.Sprintf("Ошибка: %v", err))
+		p.dbLog(fmt.Sprintf("Error: %v", err))
 		return nil
 	}
+
 	defer data.Body.Close()
 
 	doc, err := goquery.NewDocumentFromReader(data.Body)
@@ -233,8 +237,10 @@ func (p *Parser) missToTags(articleTags []string) bool {
     if len(p.MissTags) > 0 {
         for _, atags := range articleTags {
             for _, mtags := range p.MissTags {
-                if strings.Contains(strings.ToLower(atags), strings.ToLower(mtags)) {
-                    fmt.Sprintf("Не публикуем, присутствует тэг \"%s\"", mtags)
+                if strings.Contains(
+					strings.ToLower(atags), 
+					strings.ToLower(mtags)) {
+                    fmt.Sprintf("No publish, there is a tag \"%s\"", mtags)
                     return false
                 }
             }
