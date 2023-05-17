@@ -18,7 +18,7 @@ import (
 type Parser struct {
 	EntryURL     string
 	BaseURL      string
-	Pre          string
+	ParsRegularExp          string
 	MissTags     []string
 	PublicTags   bool
 	
@@ -34,15 +34,15 @@ func NewParser(url string,
 	missTags []string,
 	publicTags bool) *Parser {
 
-	re := regexp.MustCompile(`((http[s]?)://[^/]+)`)
+	RegularExp := regexp.MustCompile(`((http[s]?)://[^/]+)`)
 
-	BaseURL := re.FindStringSubmatch(url)[1]
+	BaseURL := RegularExp.FindStringSubmatch(url)[1]
 
-	Pre := re.FindStringSubmatch(url)[2]
+	ParsRegularExp := RegularExp.FindStringSubmatch(url)[2]
 	return &Parser{
 		EntryURL:   url,
 		BaseURL:    BaseURL,
-		Pre:        Pre,
+		ParsRegularExp:        ParsRegularExp,
 		MissTags:   missTags,
 		PublicTags: publicTags,
 	}
@@ -65,20 +65,21 @@ func (p *Parser) GetArticles() []map[string]interface{} {
 		articleTags :=      []string{}
 		formatedArticles := []string{}
 
-		// public := true
+		public := true
 
 		fmt.Printf("Parsing: %s\n", articleLink)
-
-		// TODO: to fix this
-		articleTree, err := p.getListArticles(articleLink)
-		if err != nil {
+			// FIXME:: to fix this
+		articleTree, err := p.getListArticles()
+		if articleTree == nil {
 			fmt.Printf("Error in ID: %s\n", articleLink)
 			continue
-		}
+		} 
+		// if err != nil {
+		// 	fmt.Printf("Error in ID: %s\n", articleLink)
+		// 	continue
+		// }
 
 		p.timer(0)
-
-		// articleDate := p.getArticleDate(articleTree)
 
 		articleTitle := p.getArticleTitle(articleTree)
 		if articleTitle == "" {
@@ -87,16 +88,23 @@ func (p *Parser) GetArticles() []map[string]interface{} {
 		}
 
 		articleTags = p.getArticleTags(articleTree)
-		// public, err = p.missToTags(articleTags)
+			// FIXME:: to fix this
+		public, err = p.missToTags(articleTags)
+		if !public {
+			errorText = append(errorText, fmt.Sprintf(
+				"There is a tag from the list'%s' ", 
+				strings.Join(p.MissTags, ",")))
+		}
 		// if err != nil{
 		// 	fmt.Sprintf("There is a tag from the list'%s' ", strings.Join(p.MissTags, ","))
 		// }
-		// if !public {
-		// 	errorText = append(errorText, fmt.Sprintf(
-		// 		"There is a tag from the list'%s' ", strings.Join(p.MissTags, ",")))
-		// }
 
-		if p.publicTags && len(articleTags) > 0 {
+		if !public {
+			errorText = append(errorText, fmt.Sprintf(
+				"There is a tag from the list'%s' ", strings.Join(p.MissTags, ",")))
+		}
+
+		if p.PublicTags && len(articleTags) > 0 {
 			formatedText = append(formatedText, 
 				"\r\n\r\n", strings.Join(articleTags, " "))
 		}
@@ -109,11 +117,17 @@ func (p *Parser) GetArticles() []map[string]interface{} {
 				"The text is long, post id: %d", article["Id"]))
 		}
 
+		getArticledate := p.getArticleDate(articleTree)
 		if p.ignoreArticle(articleTree) {
 			fmt.Printf("Ignore, post id: %d\n", article["Id"])
+					// FIXME:: to fix this 2
 			formatedArticles = append(formatedArticles, map[string]interface{}{
-				"Id":        article["Id"], 
-				"Link":      articleLink,
+			        "Id":        article["Id"],
+        			"Link":      articleLink,
+        			"Text":      strings.Join(formatedText, ""),
+        			"Published": getArticledate,
+        			"Public":    false,
+        			"Error":     errorText,
 			})
 		}
 	}
@@ -184,11 +198,10 @@ func (p *Parser) getListArticles() []map[string]string {
 	if p.getTree() {
 		if p.isBlocks() {
 			for _, block := range p.getBlocks() {
+				if !p.notMissingArticle(block) {
+					continue
+				}
 				
-				// TODO: to fix this
-				// if !p.notMissingArticle(block) {
-				// 	continue
-				// }
 				articleID := p.getArticleID(block)
 				if articleID == "" {
 					continue
@@ -197,7 +210,8 @@ func (p *Parser) getListArticles() []map[string]string {
 				link := p.normalizeURL(p.getArticleLink(block))
 				listArticlesID = append(
 					listArticlesID, map[string]string{
-						"Id": articleID, "Link": link,
+						"Id": articleID, 
+						"Link": link,
 					})
 			}
 		}
@@ -222,12 +236,12 @@ func (p *Parser) missToTags(articleTags []string) bool {
 }
 
 func (p *Parser) normalizeURL(url string) string {
-	pre := p.Pre
+	psex := p.ParsRegularExp
 	if !strings.Contains(url, p.BaseURL) && !strings.Contains(url, "http") {
 		if url[:1] == "/" && url[:2] != "//" {
 			return p.BaseURL + url
 		} else if url[:2] == "//" {
-			return pre + url
+			return psex + url
 		} else {
 			return p.BaseURL + "/" + url
 		}
@@ -270,7 +284,7 @@ func (p *Parser) getArticleID(blockTree *goquery.Selection) string {
     return ""
 }
 
-func (p *Parser) notMissingArticle(block *html.Node) bool {
+func (p *Parser) notMissingArticle(block *goquery.Selection) bool {
 	// Add conditions here
 	return true
 	}
