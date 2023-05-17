@@ -26,6 +26,10 @@ type Parser struct {
     HTTPClient   *http.Client
 }
 
+type articles interface {
+	GetArticles() []map[string]interface{}
+}
+
 func NewParser(url string, 
 	missTags []string,
 	publicTags bool) *Parser {
@@ -51,22 +55,22 @@ func (p *Parser) GetArticles() []map[string]interface{} {
 		listArticles[i], listArticles[j] = listArticles[j], listArticles[i]
 	}
 
-	// articles := []map[string]interface{}{}
-
 	for _, article := range listArticles {
-		articleLink := strings.Replace(fmt.Sprintf(
+	    articleLink := strings.Replace(fmt.Sprintf(
 			"%v", article["Link"]), 
 			"old_string", "new_string", -1)
 
-		errorText  :=    []string{}
-		formatedText :=  []string{}
-		articleTags :=   []string{}
+		errorText  :=       []string{}
+		formatedText :=     []string{}
+		articleTags :=      []string{}
+		formatedArticles := []string{}
 
-		public := true
+		// public := true
 
 		fmt.Printf("Parsing: %s\n", articleLink)
 
-		articleTree := p.getListArticles()
+		// TODO: to fix this
+		articleTree, err := p.getListArticles(articleLink)
 		if err != nil {
 			fmt.Printf("Error in ID: %s\n", articleLink)
 			continue
@@ -83,22 +87,29 @@ func (p *Parser) GetArticles() []map[string]interface{} {
 		}
 
 		articleTags = p.getArticleTags(articleTree)
-		public = p.missToTags(articleTags)
-		if !public {
-			errorText = append(errorText, fmt.Sprintf("There is a tag from the list'%s' ", strings.Join(p.MissTags, ",")))
-		}
+		// public, err = p.missToTags(articleTags)
+		// if err != nil{
+		// 	fmt.Sprintf("There is a tag from the list'%s' ", strings.Join(p.MissTags, ","))
+		// }
+		// if !public {
+		// 	errorText = append(errorText, fmt.Sprintf(
+		// 		"There is a tag from the list'%s' ", strings.Join(p.MissTags, ",")))
+		// }
 
 		if p.publicTags && len(articleTags) > 0 {
-			formatedText = append(formatedText, "\r\n\r\n", strings.Join(articleTags, " "))
+			formatedText = append(formatedText, 
+				"\r\n\r\n", strings.Join(articleTags, " "))
 		}
 
 		if len(strings.Join(formatedText, "")) >= 7000 {
 			public = false
 			fmt.Printf("The text is long, post id: %d\n", article["Id"])
-			errorText = append(errorText, fmt.Sprintf("The text is long, post id: %d", article["Id"]))
+			
+			errorText = append(errorText, fmt.Sprintf(
+				"The text is long, post id: %d", article["Id"]))
 		}
 
-		if p.igonreArticle(articleTree) {
+		if p.ignoreArticle(articleTree) {
 			fmt.Printf("Ignore, post id: %d\n", article["Id"])
 			formatedArticles = append(formatedArticles, map[string]interface{}{
 				"Id":        article["Id"], 
@@ -109,33 +120,9 @@ func (p *Parser) GetArticles() []map[string]interface{} {
 	return nil
 }
 
-func (p *Parser) getListArticles() []map[string]string {
-	listArticlesID := make([]map[string]string, 0)
-	if p.getTree() {
-		if p.isBlocks() {
-			for _, block := range p.getBlocks() {
-				//to fix this
-				// if !p.notMissingArticle(block) {
-				// 	continue
-				// }
-				articleID := p.getArticleID(block)
-				if articleID == "" {
-					continue
-				}
-
-				link := p.normalizeURL(p.getArticleLink(block))
-				listArticlesID = append(
-					listArticlesID, 
-					map[string]string{"Id": articleID, "Link": link})
-			}
-		}
-	}
-	return listArticlesID
-}
-
 func (p *Parser) getTree() bool {
-    resp, err := p.HTTPClient.Get(p.EntryURL)
-    if err != nil {
+	resp, err := p.HTTPClient.Get(p.EntryURL)
+	if err != nil {
         log.Printf("Failed to get page: %v", err)
         return false
     }
@@ -192,6 +179,32 @@ func (p *Parser) getArticle(articleLink string) *goquery.Document {
 	return doc
 }
 
+func (p *Parser) getListArticles() []map[string]string {
+	listArticlesID := make([]map[string]string, 0)
+	if p.getTree() {
+		if p.isBlocks() {
+			for _, block := range p.getBlocks() {
+				
+				// TODO: to fix this
+				// if !p.notMissingArticle(block) {
+				// 	continue
+				// }
+				articleID := p.getArticleID(block)
+				if articleID == "" {
+					continue
+				}
+
+				link := p.normalizeURL(p.getArticleLink(block))
+				listArticlesID = append(
+					listArticlesID, map[string]string{
+						"Id": articleID, "Link": link,
+					})
+			}
+		}
+	}
+	return listArticlesID
+}
+
 func (p *Parser) missToTags(articleTags []string) bool {
     if len(p.MissTags) > 0 {
         for _, atags := range articleTags {
@@ -242,17 +255,6 @@ func removeArticle(articleTree *goquery.Selection, remclass string) {
         }
     })
 }
-
-												//unnecessary
-// func (p *Parser) getTree() bool {
-//     data, err := requests.Get(p.EntryURL, headers)
-//     if err != nil {
-//         p.dbLog(fmt.Sprintf("Ошибка: %v", err))
-//         return false
-//     }
-//     p.EntryURL = html.FromString(data.Content())
-//     return true
-// }
 
 func (p *Parser) removeClassTree(articleTree []*html.Node, remClass string) {
 	doc := goquery.NewDocumentFromNode(articleTree[0])
