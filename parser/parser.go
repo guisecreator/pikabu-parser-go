@@ -88,9 +88,9 @@ func (p *Parser) GetArticles() []map[string]interface{} {
 			errorText = append(errorText, fmt.Sprintf("There is a tag from the list'%s' ", strings.Join(p.MissTags, ",")))
 		}
 
-		// if p.publicTags && len(articleTags) > 0 {
-		// 	formatedText = append(formatedText, "\r\n\r\n", strings.Join(articleTags, " "))
-		// }
+		if p.publicTags && len(articleTags) > 0 {
+			formatedText = append(formatedText, "\r\n\r\n", strings.Join(articleTags, " "))
+		}
 
 		if len(strings.Join(formatedText, "")) >= 7000 {
 			public = false
@@ -98,13 +98,13 @@ func (p *Parser) GetArticles() []map[string]interface{} {
 			errorText = append(errorText, fmt.Sprintf("The text is long, post id: %d", article["Id"]))
 		}
 
-		// if p.igonreArticle(articleTree) {
-		// 	fmt.Printf("Ignore, post id: %d\n", article["Id"])
-		// 	formatedArticles = append(formatedArticles, map[string]interface{}{
-		// 		"Id":        article["Id"], 
-		// 		"Link":      articleLink,
-		// 	})
-		// }
+		if p.igonreArticle(articleTree) {
+			fmt.Printf("Ignore, post id: %d\n", article["Id"])
+			formatedArticles = append(formatedArticles, map[string]interface{}{
+				"Id":        article["Id"], 
+				"Link":      articleLink,
+			})
+		}
 	}
 	return nil
 }
@@ -114,6 +114,7 @@ func (p *Parser) getListArticles() []map[string]string {
 	if p.getTree() {
 		if p.isBlocks() {
 			for _, block := range p.getBlocks() {
+				//to fix this
 				// if !p.notMissingArticle(block) {
 				// 	continue
 				// }
@@ -121,58 +122,16 @@ func (p *Parser) getListArticles() []map[string]string {
 				if articleID == "" {
 					continue
 				}
+
 				link := p.normalizeURL(p.getArticleLink(block))
-				listArticlesID = append(listArticlesID, map[string]string{"Id": articleID, "Link": link})
+				listArticlesID = append(
+					listArticlesID, 
+					map[string]string{"Id": articleID, "Link": link})
 			}
 		}
 	}
 	return listArticlesID
 }
-
-func (p *Parser) normalizeURL(url string) string {
-	pre := p.Pre
-	if !strings.Contains(url, p.BaseURL) && !strings.Contains(url, "http") {
-		if url[:1] == "/" && url[:2] != "//" {
-			return p.BaseURL + url
-		} else if url[:2] == "//" {
-			return pre + url
-		} else {
-			return p.BaseURL + "/" + url
-		}
-	}
-	return url
-}
-
-func (p *Parser) excludePosts(listArticlesID []map[string]string) {
-	toRem := []map[string]string{}
-	for _, articleID := range listArticlesID {
-		if p.dbExistArticle(articleID["Id"]) {
-			toRem = append(toRem, articleID)
-			p.dbLog(fmt.Sprintf("Has already: %v", articleID["Id"]))
-		}
-	}
-}
-
-func removeArticle(articleTree *goquery.Selection, remclass string) {
-    articleTree.Find("*").Each(func(i int, s *goquery.Selection) {
-        class, exists := s.Attr("class")
-        if exists {
-            if strings.Contains(class, remclass) {
-                s.Remove()
-            }
-        }
-    })
-}
-
-// func (p *Parser) getTree() bool {
-//     data, err := requests.Get(p.EntryURL, headers)
-//     if err != nil {
-//         p.dbLog(fmt.Sprintf("Ошибка: %v", err))
-//         return false
-//     }
-//     p.EntryURL = html.FromString(data.Content())
-//     return true
-// }
 
 func (p *Parser) getTree() bool {
     resp, err := p.HTTPClient.Get(p.EntryURL)
@@ -248,6 +207,52 @@ func (p *Parser) missToTags(articleTags []string) bool {
     }
     return true
 }
+
+func (p *Parser) normalizeURL(url string) string {
+	pre := p.Pre
+	if !strings.Contains(url, p.BaseURL) && !strings.Contains(url, "http") {
+		if url[:1] == "/" && url[:2] != "//" {
+			return p.BaseURL + url
+		} else if url[:2] == "//" {
+			return pre + url
+		} else {
+			return p.BaseURL + "/" + url
+		}
+	}
+	return url
+}
+
+func (p *Parser) excludePosts(listArticlesID []map[string]string) {
+	toRem := []map[string]string{}
+	for _, articleID := range listArticlesID {
+		if p.dbExistArticle(articleID["Id"]) {
+			toRem = append(toRem, articleID)
+			p.dbLog(fmt.Sprintf("Has already: %v", articleID["Id"]))
+		}
+	}
+}
+
+func removeArticle(articleTree *goquery.Selection, remclass string) {
+    articleTree.Find("*").Each(func(i int, s *goquery.Selection) {
+        class, exists := s.Attr("class")
+        if exists {
+            if strings.Contains(class, remclass) {
+                s.Remove()
+            }
+        }
+    })
+}
+
+												//unnecessary
+// func (p *Parser) getTree() bool {
+//     data, err := requests.Get(p.EntryURL, headers)
+//     if err != nil {
+//         p.dbLog(fmt.Sprintf("Ошибка: %v", err))
+//         return false
+//     }
+//     p.EntryURL = html.FromString(data.Content())
+//     return true
+// }
 
 func (p *Parser) removeClassTree(articleTree []*html.Node, remClass string) {
 	doc := goquery.NewDocumentFromNode(articleTree[0])
