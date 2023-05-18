@@ -54,30 +54,26 @@ func (p *Parser) GetArticles() []map[string]interface{} {
 	for i, j := 0, len(listArticles)-1; i < j; i, j = i+1, j-1 {
 		listArticles[i], listArticles[j] = listArticles[j], listArticles[i]
 	}
-
+	
+	formatedArticles := make([]map[string]interface{}, 0)
 	for _, article := range listArticles {
-	    articleLink := strings.Replace(fmt.Sprintf(
+		articleLink := strings.Replace(fmt.Sprintf(
 			"%v", article["Link"]), 
 			"old_string", "new_string", -1)
 
 		errorText  :=       []string{}
 		formatedText :=     []string{}
 		articleTags :=      []string{}
-		formatedArticles := []string{}
-
+		
 		public := true
 
 		fmt.Printf("Parsing: %s\n", articleLink)
-			// FIXME:: to fix this
-		articleTree, err := p.getListArticles()
+
+		articleTree := p.getArticle(articleLink)
 		if articleTree == nil {
 			fmt.Printf("Error in ID: %s\n", articleLink)
 			continue
-		} 
-		// if err != nil {
-		// 	fmt.Printf("Error in ID: %s\n", articleLink)
-		// 	continue
-		// }
+		}
 
 		p.timer(0)
 
@@ -87,17 +83,13 @@ func (p *Parser) GetArticles() []map[string]interface{} {
 			continue
 		}
 
-		articleTags = p.getArticleTags(articleTree)
-			// FIXME:: to fix this
-		public, err = p.missToTags(articleTags)
+		articleTags = p.getArticleTags(articleTree.Selection)
+		public = p.missToTags(articleTags)
 		if !public {
 			errorText = append(errorText, fmt.Sprintf(
 				"There is a tag from the list'%s' ", 
 				strings.Join(p.MissTags, ",")))
 		}
-		// if err != nil{
-		// 	fmt.Sprintf("There is a tag from the list'%s' ", strings.Join(p.MissTags, ","))
-		// }
 
 		if !public {
 			errorText = append(errorText, fmt.Sprintf(
@@ -117,21 +109,21 @@ func (p *Parser) GetArticles() []map[string]interface{} {
 				"The text is long, post id: %d", article["Id"]))
 		}
 
-		getArticledate := p.getArticleDate(articleTree)
+		getArticleDate := p.getArticleDate(articleTree)
 		if p.ignoreArticle(articleTree) {
 			fmt.Printf("Ignore, post id: %d\n", article["Id"])
-					// FIXME:: to fix this 2
-			formatedArticles = append(formatedArticles, map[string]interface{}{
+				formatedArticles = append(formatedArticles, map[string]interface{}{
 			        "Id":        article["Id"],
         			"Link":      articleLink,
         			"Text":      strings.Join(formatedText, ""),
-        			"Published": getArticledate,
+        			"Published": getArticleDate,
         			"Public":    false,
         			"Error":     errorText,
 			})
 		}
 	}
-	return nil
+
+	return formatedArticles
 }
 
 func (p *Parser) getTree() bool {
@@ -177,6 +169,7 @@ func (p *Parser) getArticleTags(articleTree *goquery.Selection) []string {
 
 func (p *Parser) getArticle(articleLink string) *goquery.Document {
 	// Returns the article object
+	// todo: add err for getArticle(link)?
 	data, err := p.HTTPClient.Get(articleLink)
 	if err != nil {
 		p.dbLog(fmt.Sprintf("Error: %v", err))
@@ -191,6 +184,7 @@ func (p *Parser) getArticle(articleLink string) *goquery.Document {
 		return nil
 	}
 	return doc
+
 }
 
 func (p *Parser) getListArticles() []map[string]string {
@@ -201,7 +195,7 @@ func (p *Parser) getListArticles() []map[string]string {
 				if !p.notMissingArticle(block) {
 					continue
 				}
-				
+
 				articleID := p.getArticleID(block)
 				if articleID == "" {
 					continue
