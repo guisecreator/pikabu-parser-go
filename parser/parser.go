@@ -3,8 +3,9 @@ package parser
 import (
 	"bytes"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"log"
+	"sort"
 	"time"
 
 	"net/http"
@@ -12,7 +13,6 @@ import (
 	"strings"
 
 	"github.com/PuerkitoBio/goquery"
-	"golang.org/x/net/html"
 )
 
 type Parser struct {
@@ -24,10 +24,6 @@ type Parser struct {
 	
     EntryTree    *goquery.Document
     HTTPClient   *http.Client
-}
-
-type articles interface {
-	GetArticles() []map[string]interface{}
 }
 
 func NewParser(url string, 
@@ -50,7 +46,7 @@ func NewParser(url string,
 
 func (p *Parser) GetArticles() []map[string]interface{} {
 	listArticles := p.getListArticles()
-	// reverse list of articles
+	p.excludePosts(listArticles)
 	for i, j := 0, len(listArticles)-1; i < j; i, j = i+1, j-1 {
 		listArticles[i], listArticles[j] = listArticles[j], listArticles[i]
 	}
@@ -61,9 +57,9 @@ func (p *Parser) GetArticles() []map[string]interface{} {
 			"%v", article["Link"]), 
 			"old_string", "new_string", -1)
 
-		errorText  :=       []string{}
-		formatedText :=     []string{}
-		articleTags :=      []string{}
+		errorText  :=    []string{}
+		formatedText :=  []string{}
+		articleTags :=   []string{}
 		
 		public := true
 
@@ -101,12 +97,18 @@ func (p *Parser) GetArticles() []map[string]interface{} {
 				"\r\n\r\n", strings.Join(articleTags, " "))
 		}
 
+		// articleID, err := strconv.Atoi(article["Id"].(string)) 
+		// if err != nil{
+		// 	fmt.Printf("The text is long, post id: %d", articleID)
+		// }
+
 		if len(strings.Join(formatedText, "")) >= 7000 {
 			public = false
 			fmt.Printf("The text is long, post id: %d\n", article["Id"])
+
 			
-			errorText = append(errorText, fmt.Sprintf(
-				"The text is long, post id: %d", article["Id"]))
+			errorText = append(errorText, 
+				fmt.Sprintf("The text is long, post id: %d", article["Id"]))
 		}
 
 		getArticleDate := p.getArticleDate(articleTree)
@@ -134,7 +136,7 @@ func (p *Parser) getTree() bool {
     }
     defer resp.Body.Close()
 
-    pageBytes, err := ioutil.ReadAll(resp.Body)
+    pageBytes, err := io.ReadAll(resp.Body)
     if err != nil {
         log.Printf("Failed to read response body: %v", err)
         return false
@@ -187,6 +189,28 @@ func (p *Parser) getArticle(articleLink string) *goquery.Document {
 
 }
 
+func (p *Parser) excludePosts(listArticlesID []map[string]string) {
+	toRem := make([]map[string]string, 0, len(listArticlesID))
+	count := 0
+
+	for _, articleID := range listArticlesID {
+		if p.dbExistArticle(articleID["Id"]) {
+			toRem[count] = articleID
+			count++ 
+
+			p.dbLog(fmt.Sprintf("Has already: %v", articleID["Id"],))
+		}
+	}
+
+	if count < len(listArticlesID){
+		toRem = toRem[:count]
+		sort.Slice(toRem, func(i, j int) bool {
+			return true
+		})
+	} 
+
+}
+
 func (p *Parser) getListArticles() []map[string]string {
 	listArticlesID := make([]map[string]string, 0)
 	if p.getTree() {
@@ -217,10 +241,8 @@ func (p *Parser) missToTags(articleTags []string) bool {
     if len(p.MissTags) > 0 {
         for _, atags := range articleTags {
             for _, mtags := range p.MissTags {
-                if strings.Contains(
-					strings.ToLower(atags), 
-					strings.ToLower(mtags)) {
-                    fmt.Sprintf("No publish, there is a tag \"%s\"", mtags)
+                if strings.Contains(strings.ToLower(atags), strings.ToLower(mtags)) {
+                    // fmt.Sprintf("No publish, there is a tag \"%s\"", mtags)
                     return false
                 }
             }
@@ -242,37 +264,7 @@ func (p *Parser) normalizeURL(url string) string {
 	}
 	return url
 }
-
-func (p *Parser) excludePosts(listArticlesID []map[string]string) {
-	toRem := []map[string]string{}
-	for _, articleID := range listArticlesID {
-		if p.dbExistArticle(articleID["Id"]) {
-			toRem = append(toRem, articleID)
-			p.dbLog(fmt.Sprintf("Has already: %v", articleID["Id"]))
-		}
-	}
-}
-
-func removeArticle(articleTree *goquery.Selection, remclass string) {
-    articleTree.Find("*").Each(func(i int, s *goquery.Selection) {
-        class, exists := s.Attr("class")
-        if exists {
-            if strings.Contains(class, remclass) {
-                s.Remove()
-            }
-        }
-    })
-}
-
-func (p *Parser) removeClassTree(articleTree []*html.Node, remClass string) {
-	doc := goquery.NewDocumentFromNode(articleTree[0])
-
-	doc.Find("." + remClass).Each(func(i int, 
-		s *goquery.Selection) {
-		s.Remove()
-	})
-}
-
+ 
 func (p *Parser) getArticleID(blockTree *goquery.Selection) string {
 	// return ID Art
     return ""
@@ -282,10 +274,6 @@ func (p *Parser) notMissingArticle(block *goquery.Selection) bool {
 	// Add conditions here
 	return true
 	}
-
-func (p *Parser) clearText(text string) string {
-    return regexp.MustCompile(`(\r\n|\n)`).ReplaceAllString(text, " ")
-}
 
 func (p *Parser) timer(seconds int) {
     time.Sleep(time.Duration(seconds) * time.Second)
@@ -312,33 +300,21 @@ func (p *Parser) ignoreArticle(articleTree *goquery.Document) bool {
 }
 
 func (p *Parser) getBlocks() []*goquery.Selection {
+	//todo implement me
 	// Returns an array of goquery blocks
 	panic("not implemented")
 }
 
 func (p *Parser) getArticleLink(blockTree *goquery.Selection) string {
+	//todo implement me
 	// Returns a link to the article
 	panic("not implemented")
 }
 
 
 func (p *Parser) getArticleTitle(articleTree *goquery.Document) string {
+	//todo implement me
 	// Returns the title of the article
-	panic("not implemented")
-}
-
-func (p *Parser) getFormattedText(articleTree *goquery.Document) string {
-	// Returns the text of the article
-	panic("not implemented")
-}
-
-func (p *Parser) getArticleImages(articleTree *goquery.Document) []map[string]string {
-	// Returns an array of found images
-	return []map[string]string{{"src":  "img_alt"}}
-}
-
-func (p *Parser) getArticleVideos(articleTree *goquery.Document) []string {
-	// Returns an array of found video links
 	panic("not implemented")
 }
 
