@@ -2,27 +2,26 @@ package parser
 
 import (
 	"fmt"
-	"sort"
-	"time"
-
 	"net/http"
 	"regexp"
+	"sort"
 	"strings"
+	"time"
 
 	"github.com/PuerkitoBio/goquery"
-	// "github.com/guisecreator/pikabu-parser-go/parser/recipient"
+
+	"github.com/guisecreator/pikabu-parser-go/parser/recipient"
 	// "github.com/guisecreator/pikabu-parser-go/parser/tags"
 )
 
 type Parser struct {
-	EntryURL     string
-	BaseURL      string
-	ParsRegularExp          string
-	MissTags     []string
-	PublicTags   bool
-	
-    EntryTree    *goquery.Document
-    HTTPClient   *http.Client
+	BaseURL      	string
+	ParsRegularExp  string
+	MissTags     	[]string
+	PublicTags   	bool
+	EntryURL     	string
+	HTTPClient   	*http.Client
+	EntryTree    	*goquery.Document
 }
 
 func NewParser(url string, missTags []string, publicTags bool) *Parser {
@@ -33,7 +32,6 @@ func NewParser(url string, missTags []string, publicTags bool) *Parser {
 
 	ParsRegularExp := RegularExp.FindStringSubmatch(url)[2]
 	return &Parser{
-		EntryURL:   		url,
 		BaseURL:    		BaseURL,
 		MissTags:   		missTags,
 		ParsRegularExp:     ParsRegularExp,
@@ -42,7 +40,7 @@ func NewParser(url string, missTags []string, publicTags bool) *Parser {
 }
 
 func (p *Parser) GetPosts() []map[string]interface{} {
-	listArticles := p.getListArticles()
+	listArticles := p.GetListArticles()
 	p.excludePosts(listArticles)
 	for i, j := 0, len(listArticles)-1; i < j; i, j = i+1, j-1 {
 		listArticles[i], listArticles[j] = listArticles[j], listArticles[i]
@@ -62,7 +60,7 @@ func (p *Parser) GetPosts() []map[string]interface{} {
 
 		fmt.Printf("Parsing: %s\n", articleLink)
 
-		articleTree := p.getArticle(articleLink)
+		articleTree := p.GetArticle(articleLink)
 		if articleTree == nil {
 			fmt.Printf("Error in ID: %s\n", articleLink)
 			continue
@@ -76,8 +74,8 @@ func (p *Parser) GetPosts() []map[string]interface{} {
 			continue
 		}
 
-		articleTags = p.getArticleTags(articleTree.Selection)
-		public = p.missToTags(articleTags)
+		articleTags = p.GetArticleTags(articleTree.Selection)
+		public = p.MissToTags(articleTags)
 		if !public {
 			errorText = append(errorText, fmt.Sprintf(
 				"There is a tag from the list'%s' ", 
@@ -130,11 +128,11 @@ func (p *Parser) excludePosts(listArticlesID []map[string]string) {
 	count := 0
 
 	for _, articleID := range listArticlesID {
-		if p.dbExistArticle(articleID["Id"]) {
+		if recipient.DbExistArticle(articleID["Id"]) {
 			toRem[count] = articleID
 			count++ 
-
-			p.dbLog(fmt.Sprintf("Has already: %v", articleID["Id"],))
+			
+			recipient.DbLog(fmt.Sprintf("Has already: %v", articleID["Id"],))
 		}
 	}
 
@@ -145,6 +143,21 @@ func (p *Parser) excludePosts(listArticlesID []map[string]string) {
 		})
 	} 
 
+}
+
+func  (p *Parser) MissToTags(articleTags []string) bool {
+	if len(p.MissTags) > 0 {
+		for _, atags := range articleTags {
+			for _, mtags := range p.MissTags {
+				if strings.Contains(strings.ToLower(atags), 
+					strings.ToLower(mtags)) {
+					fmt.Sprintf("No publish, there is a tag \"%s\"", mtags)
+					return false
+				}
+			}
+		}
+	}
+	return true
 }
  
 func (p *Parser) timer(seconds int) {

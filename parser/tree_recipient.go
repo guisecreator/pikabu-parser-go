@@ -1,15 +1,15 @@
-package recipient
+package parser
 
 import (
 	"bytes"
 	"io"
 	"log"
-
+	"net/http"
 	"github.com/PuerkitoBio/goquery"
 )
 
-func getTree() bool {
-	resp, err := p.HTTPClient.Get(p.EntryURL)
+func (p *Parser) getTree() bool {
+	resp, err := http.Get(p.EntryURL)
 	if err != nil {
 		log.Printf("Failed to get page: %v", err)
 		return false
