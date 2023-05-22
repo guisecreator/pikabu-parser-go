@@ -1,10 +1,7 @@
 package parser
 
 import (
-	"bytes"
 	"fmt"
-	"io"
-	"log"
 	"sort"
 	"time"
 
@@ -13,6 +10,8 @@ import (
 	"strings"
 
 	"github.com/PuerkitoBio/goquery"
+	// "github.com/guisecreator/pikabu-parser-go/parser/recipient"
+	// "github.com/guisecreator/pikabu-parser-go/parser/tags"
 )
 
 type Parser struct {
@@ -26,9 +25,7 @@ type Parser struct {
     HTTPClient   *http.Client
 }
 
-func NewParser(url string, 
-	missTags []string,
-	publicTags bool) *Parser {
+func NewParser(url string, missTags []string, publicTags bool) *Parser {
 
 	RegularExp := regexp.MustCompile(`((http[s]?)://[^/]+)`)
 
@@ -36,15 +33,15 @@ func NewParser(url string,
 
 	ParsRegularExp := RegularExp.FindStringSubmatch(url)[2]
 	return &Parser{
-		EntryURL:   url,
-		BaseURL:    BaseURL,
-		ParsRegularExp:        ParsRegularExp,
-		MissTags:   missTags,
-		PublicTags: publicTags,
+		EntryURL:   		url,
+		BaseURL:    		BaseURL,
+		MissTags:   		missTags,
+		ParsRegularExp:     ParsRegularExp,
+		PublicTags: 		publicTags,
 	}
 }
 
-func (p *Parser) GetArticles() []map[string]interface{} {
+func (p *Parser) GetPosts() []map[string]interface{} {
 	listArticles := p.getListArticles()
 	p.excludePosts(listArticles)
 	for i, j := 0, len(listArticles)-1; i < j; i, j = i+1, j-1 {
@@ -128,67 +125,6 @@ func (p *Parser) GetArticles() []map[string]interface{} {
 	return formatedArticles
 }
 
-func (p *Parser) getTree() bool {
-	resp, err := p.HTTPClient.Get(p.EntryURL)
-	if err != nil {
-        log.Printf("Failed to get page: %v", err)
-        return false
-    }
-    defer resp.Body.Close()
-
-    pageBytes, err := io.ReadAll(resp.Body)
-    if err != nil {
-        log.Printf("Failed to read response body: %v", err)
-        return false
-    }
-
-    pageReader := bytes.NewReader(pageBytes)
-    doc, err := goquery.NewDocumentFromReader(pageReader)
-    if err != nil {
-        log.Printf("Failed to parse HTML: %v", err)
-        return false
-    }
-
-    p.EntryTree = doc
-    return true
-}
-
-func (p *Parser) getArticleTags(articleTree *goquery.Selection) []string {
-	var tags []string
-	tagsNodes := articleTree.Find(".tag-list").Find("a")
-
-	tagsNodes.Each(func(_ int, 
-		tagNode *goquery.Selection) {
-		tagText := strings.TrimSpace(tagNode.Text())
-
-		if len(tagText) > 0 {
-			tags = append(tags, tagText)
-		}
-	})
-	return tags
-
-}
-
-func (p *Parser) getArticle(articleLink string) *goquery.Document {
-	// Returns the article object
-	// todo: add err for getArticle(link)?
-	data, err := p.HTTPClient.Get(articleLink)
-	if err != nil {
-		p.dbLog(fmt.Sprintf("Error: %v", err))
-		return nil
-	}
-
-	defer data.Body.Close()
-
-	doc, err := goquery.NewDocumentFromReader(data.Body)
-	if err != nil {
-		p.dbLog(fmt.Sprintf("Error: %v", err))
-		return nil
-	}
-	return doc
-
-}
-
 func (p *Parser) excludePosts(listArticlesID []map[string]string) {
 	toRem := make([]map[string]string, 0, len(listArticlesID))
 	count := 0
@@ -210,116 +146,8 @@ func (p *Parser) excludePosts(listArticlesID []map[string]string) {
 	} 
 
 }
-
-func (p *Parser) getListArticles() []map[string]string {
-	listArticlesID := make([]map[string]string, 0)
-	if p.getTree() {
-		if p.isBlocks() {
-			for _, block := range p.getBlocks() {
-				if !p.notMissingArticle(block) {
-					continue
-				}
-
-				articleID := p.getArticleID(block)
-				if articleID == "" {
-					continue
-				}
-
-				link := p.normalizeURL(p.getArticleLink(block))
-				listArticlesID = append(
-					listArticlesID, map[string]string{
-						"Id": articleID, 
-						"Link": link,
-					})
-			}
-		}
-	}
-	return listArticlesID
-}
-
-func (p *Parser) missToTags(articleTags []string) bool {
-    if len(p.MissTags) > 0 {
-        for _, atags := range articleTags {
-            for _, mtags := range p.MissTags {
-                if strings.Contains(strings.ToLower(atags), strings.ToLower(mtags)) {
-                    // fmt.Sprintf("No publish, there is a tag \"%s\"", mtags)
-                    return false
-                }
-            }
-        }
-    }
-    return true
-}
-
-func (p *Parser) normalizeURL(url string) string {
-	psex := p.ParsRegularExp
-	if !strings.Contains(url, p.BaseURL) && !strings.Contains(url, "http") {
-		if url[:1] == "/" && url[:2] != "//" {
-			return p.BaseURL + url
-		} else if url[:2] == "//" {
-			return psex + url
-		} else {
-			return p.BaseURL + "/" + url
-		}
-	}
-	return url
-}
  
-func (p *Parser) getArticleID(blockTree *goquery.Selection) string {
-	// return ID Art
-    return ""
-}
-
-func (p *Parser) notMissingArticle(block *goquery.Selection) bool {
-	// Add conditions here
-	return true
-	}
-
 func (p *Parser) timer(seconds int) {
-    time.Sleep(time.Duration(seconds) * time.Second)
+	//Timer for 
+	time.Sleep(time.Duration(seconds) * time.Second)
 }
-
-func (p *Parser) dbExistArticle(articleID string) bool {
-	// Checks if there is an article in the database
-	return false
-}
-
-func (p *Parser) dbLog(logText string) {
-	// Logg
-	fmt.Println(logText)
-}
-
-func (p *Parser) isBlocks() bool {
-	// Checks if the object is a valid block
-	return false
-}
-
-func (p *Parser) ignoreArticle(articleTree *goquery.Document) bool {
-	// Ignore article
-	return false
-}
-
-func (p *Parser) getBlocks() []*goquery.Selection {
-	//todo implement me
-	// Returns an array of goquery blocks
-	panic("not implemented")
-}
-
-func (p *Parser) getArticleLink(blockTree *goquery.Selection) string {
-	//todo implement me
-	// Returns a link to the article
-	panic("not implemented")
-}
-
-
-func (p *Parser) getArticleTitle(articleTree *goquery.Document) string {
-	//todo implement me
-	// Returns the title of the article
-	panic("not implemented")
-}
-
-func (p *Parser) getArticleDate(articleTree *goquery.Document) time.Time {
-	// Returns the date of the article
-	return time.Now()
-}
-

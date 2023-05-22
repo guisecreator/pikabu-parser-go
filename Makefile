@@ -4,5 +4,5 @@ generate:
 gen: generate
 
 dev:
-	go run .main.go
+	go run cmd/.main.go
 
