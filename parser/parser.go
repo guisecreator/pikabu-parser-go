@@ -11,7 +11,6 @@ import (
 	"github.com/PuerkitoBio/goquery"
 
 	"github.com/guisecreator/pikabu-parser-go/parser/recipient"
-	// "github.com/guisecreator/pikabu-parser-go/parser/tags"
 )
 
 type Parser struct {
@@ -66,7 +65,7 @@ func (p *Parser) GetPosts() []map[string]interface{} {
 			continue
 		}
 
-		p.timer(0)
+		p.waiting_timer(0)
 
 		articleTitle := p.getArticleTitle(articleTree)
 		if articleTitle == "" {
@@ -92,6 +91,7 @@ func (p *Parser) GetPosts() []map[string]interface{} {
 				"\r\n\r\n", strings.Join(articleTags, " "))
 		}
 
+		//TODO: redo it
 		// articleID, err := strconv.Atoi(article["Id"].(string)) 
 		// if err != nil{
 		// 	fmt.Printf("The text is long, post id: %d", articleID)
@@ -149,9 +149,8 @@ func  (p *Parser) MissToTags(articleTags []string) bool {
 	if len(p.MissTags) > 0 {
 		for _, atags := range articleTags {
 			for _, mtags := range p.MissTags {
-				if strings.Contains(strings.ToLower(atags), 
-					strings.ToLower(mtags)) {
-					fmt.Sprintf("No publish, there is a tag \"%s\"", mtags)
+				if strings.Contains(strings.ToLower(atags), strings.ToLower(mtags)) {
+					recipient.DbLog(fmt.Sprintf("No publish, there is a tag \"%s\"", mtags))
 					return false
 				}
 			}
@@ -160,7 +159,6 @@ func  (p *Parser) MissToTags(articleTags []string) bool {
 	return true
 }
  
-func (p *Parser) timer(seconds int) {
-	//Timer for 
+func (p *Parser) waiting_timer(seconds int) {
 	time.Sleep(time.Duration(seconds) * time.Second)
 }

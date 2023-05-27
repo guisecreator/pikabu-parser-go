@@ -21,8 +21,7 @@ func removeArticle(articleTree *goquery.Selection, remClass string) {
 func removeClassTree(articleTree []*html.Node, remClass string) {
 	doc := goquery.NewDocumentFromNode(articleTree[0])
 
-	doc.Find("." + remClass).Each(func(i int, 
-		s *goquery.Selection) {
+	doc.Find("." + remClass).Each(func(i int, s *goquery.Selection) {
 		s.Remove()
 	})
 }
