@@ -1,12 +1,11 @@
 package main
 
 import ( 
-
+	// "github.com/guisecreator/pikabu-parser-go/internal/pikabu_parser"
 )
 
-type Parser_Main struct {
-	InfoParser map[string]string
-
+func main() {
+	
 }
 
 

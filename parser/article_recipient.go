@@ -18,12 +18,12 @@ func (p *Parser) GetListArticles() []map[string]string {
 					continue
 				}
 
-				articleID := p.getArticleID(block)
+				articleID := GetArticleID(block)
 				if articleID == "" {
 					continue
 				}
 
-				link := p.normalizeURL(p.getArticleLink(block))
+				link := p.normalizeURL(p.GetArticleLink(block))
 				listArticlesID = append(
 					listArticlesID, map[string]string{
 						"Id": articleID, 
@@ -70,18 +70,17 @@ func (p *Parser) GetArticle(articleLink string) *goquery.Document {
 
 }
 
-func (p *Parser) getArticleID(blockTree *goquery.Selection) string {
-	// return ID Art
+func GetArticleID(blockTree *goquery.Selection) string {
 	return ""
 }
 
-func  (p *Parser) getArticleLink(blockTree *goquery.Selection) string {
+func  (p *Parser) GetArticleLink(blockTree *goquery.Selection) string {
 	//todo implement me
 	// Returns a link to the article
 	panic("not implemented")
 }
 
-func (p *Parser) getArticleTitle(articleTree *goquery.Document) string {
+func (p *Parser) GetArticleTitle(articleTree *goquery.Document) string {
 	//todo implement me
 	// Returns the title of the article
 	panic("not implemented")
@@ -97,7 +96,7 @@ func (p *Parser) notMissingArticle(block *goquery.Selection) bool {
 	return true
 }
 
-func (p *Parser) ignoreArticle(articleTree *goquery.Document) bool {
+func (p *Parser) IgnoreArticle(articleTree *goquery.Document) bool {
 	// Ignore article
 	return false
 }

@@ -1,4 +1,9 @@
-tmp
-db
-pack/*.zip
-main
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+*.test
+
+*.out

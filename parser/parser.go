@@ -67,7 +67,7 @@ func (p *Parser) GetPosts() []map[string]interface{} {
 
 		p.waiting_timer(0)
 
-		articleTitle := p.getArticleTitle(articleTree)
+		articleTitle := p.GetArticleTitle(articleTree)
 		if articleTitle == "" {
 			fmt.Printf("Error in title: %s\n", articleLink)
 			continue
@@ -107,7 +107,7 @@ func (p *Parser) GetPosts() []map[string]interface{} {
 		}
 
 		getArticleDate := p.getArticleDate(articleTree)
-		if p.ignoreArticle(articleTree) {
+		if p.IgnoreArticle(articleTree) {
 			fmt.Printf("Ignore, post id: %d\n", article["Id"])
 				formatedArticles = append(formatedArticles, map[string]interface{}{
 			        "Id":        article["Id"],
