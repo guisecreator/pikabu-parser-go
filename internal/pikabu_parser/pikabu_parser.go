@@ -13,11 +13,8 @@ type ParserPikabu struct {
 	AppINFO 		interface{}
 	DataBase 		interface{}
 	ID				interface{}
+	Posts			[]map[string]interface{}
 
-}
-
-type Posts interface {
-	[]map[string]interface{}
 }
 
 func NewParserPikabu(Url string, missTags []string, AppINFO interface{}, DataBase interface{}, ID interface{}) *ParserPikabu {
@@ -31,12 +28,12 @@ func NewParserPikabu(Url string, missTags []string, AppINFO interface{}, DataBas
 }
 
 func (pars *ParserPikabu) GetPosts() []map[string]interface{} {
-	Posts := []map[string]interface{}{}
+	// Posts := []map[string]interface{}{}
 
 	doc, err := goquery.NewDocument(pars.Url)
 	if err != nil {
 		log.Println(err)
-		return Posts
+		return pars.Posts
 	}
 
 	doc.Find(".story").Each(func(i int, s *goquery.Selection) {
@@ -67,10 +64,10 @@ func (pars *ParserPikabu) GetPosts() []map[string]interface{} {
 
 		}
 		
-		Posts = append(Posts, post)
+		pars.Posts = append(pars.Posts, post)
 	})
 	
-	return Posts 
+	return pars.Posts 
 }
 
 func (pars *ParserPikabu) getPostLink(link *goquery.Selection) string {
