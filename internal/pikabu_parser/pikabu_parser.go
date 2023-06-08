@@ -8,23 +8,22 @@ import (
 )
 
 type ParserPikabu struct {
-	Url             string
-	missTags 		[]string
-	AppINFO 		interface{}
-	DataBase 		interface{}
-	ID				interface{}
-	Posts			[]map[string]interface{}
-
+	Url      string
+	missTags []string
+	ID       interface{}
+	AppINFO  interface{}
+	DataBase interface{}
+	Posts    []map[string]interface{}
 }
 
 func NewParserPikabu(Url string, missTags []string, AppINFO interface{}, DataBase interface{}, ID interface{}) *ParserPikabu {
-	return &ParserPikabu{
-		Url:            Url,
-		missTags:	    missTags,
-		AppINFO:		AppINFO,
-		DataBase: 		DataBase,
-		ID: 			ID,		
-	}
+    return &ParserPikabu{
+        Url:      Url,
+        ID:       ID,
+        missTags: missTags,
+        AppINFO:  AppINFO,
+        DataBase: DataBase,
+        }
 }
 
 func (pars *ParserPikabu) GetPosts() []map[string]interface{} {
