@@ -23,7 +23,7 @@ func NewParserPikabu(Url string, missTags []string, AppINFO interface{}, DataBas
         missTags: missTags,
         AppINFO:  AppINFO,
         DataBase: DataBase,
-        }
+    }
 }
 
 func (pars *ParserPikabu) GetPosts() []map[string]interface{} {
@@ -100,4 +100,3 @@ func (pars *ParserPikabu) getPostTags(tag *goquery.Selection) []string {
 func (pars *ParserPikabu) existPost(postID string) bool {
 	return false
 }
-
