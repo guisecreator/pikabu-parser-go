@@ -8,6 +8,5 @@ func DbExistArticle(articleID string) bool {
 }
 
 func DbLog(logText string) {
-	// Logg
 	fmt.Println(logText)
 }

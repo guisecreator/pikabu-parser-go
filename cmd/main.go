@@ -13,7 +13,7 @@ func main() {
 	AppInfo := map[string]interface{}{
 		"Url": Url,
 	}
-														  //тэги pikabu
+							//тэги pikabu
 	parser := pikabu_parser.NewParserPikabu(Url, []string{"#", "#", "#",}, AppInfo, nil, nil,)
 	fmt.Printf("Parsing has begun...")
 

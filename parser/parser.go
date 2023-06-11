@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"github.com/PuerkitoBio/goquery"
-
 	"github.com/guisecreator/pikabu-parser-go/parser/recipient"
 )
 

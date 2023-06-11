@@ -27,8 +27,6 @@ func NewParserPikabu(Url string, missTags []string, AppINFO interface{}, DataBas
 }
 
 func (pars *ParserPikabu) GetPosts() []map[string]interface{} {
-	// Posts := []map[string]interface{}{}
-
 	doc, err := goquery.NewDocument(pars.Url)
 	if err != nil {
 		log.Println(err)
